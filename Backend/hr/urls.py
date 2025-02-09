@@ -9,4 +9,5 @@ urlpatterns = [
     path('post_job/', post_job),
     path('get_jobs/', get_jobs),
     path("get_selected_candidates/<str:job_id>/", get_selected_candidates, name="get_selected_candidates"),
+    path("delete_job/<str:job_id>/", delete_job)
 ]

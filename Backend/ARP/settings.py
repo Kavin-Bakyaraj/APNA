@@ -81,7 +81,6 @@ WSGI_APPLICATION = 'ARP.wsgi.application'
 
 
 
-
 SECRET_KEY = 'apna'
 
 REST_FRAMEWORK = {

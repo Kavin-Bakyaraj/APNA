@@ -291,3 +291,45 @@ def get_selected_candidates(request, job_id):
             return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
 
     return JsonResponse({"message": "Invalid request method"}, status=405)
+
+
+from bson import ObjectId
+import jwt
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def delete_job(request, job_id):  # Accept job_id from the URL
+    if request.method == "DELETE":
+        try:
+            auth_header = request.headers.get("Authorization")
+            if not auth_header:
+                return JsonResponse({"message": "Authorization token missing"}, status=401)
+
+            # Decode JWT token
+            try:
+                token = auth_header.split(" ")[1]  # Bearer <token>
+                decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+                hr_id = decoded_token.get("hr_id")  # Extract HR ID from token
+            except jwt.ExpiredSignatureError:
+                return JsonResponse({"message": "Token expired"}, status=401)
+            except jwt.InvalidTokenError:
+                return JsonResponse({"message": "Invalid token"}, status=401)
+
+            # Verify job existence and ownership
+            job = job_collection.find_one({"_id": ObjectId(job_id)})
+            if not job:
+                return JsonResponse({"message": "Job not found"}, status=404)
+
+            if str(job.get("hr_id")) != str(hr_id):  # Ensure only the HR who created it can delete
+                return JsonResponse({"message": "Unauthorized: You can only delete your own job postings"}, status=403)
+
+            # Delete job from MongoDB
+            job_collection.delete_one({"_id": ObjectId(job_id)})
+
+            return JsonResponse({"message": "Job deleted successfully"}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
+
+    return JsonResponse({"message": "Invalid request method"}, status=405)
