@@ -2,16 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global styles for the body */
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Inter', 'Roboto', 'Segoe UI', 'Ubuntu', 'Cantarell', 
+               'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  background-color: #F4F2F6; /* Matches Apna's light background */
+  color: #190A28; /* Apna's primary text color */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+.input-field {
+  @apply w-full p-3 border border-gray-300 rounded-md focus:ring-[#190A28] focus:border-[#190A28] mt-3;
+}
 
+.btn {
+  @apply w-full bg-[#190A28] text-white py-3 rounded-md hover:bg-[#2B1C43] transition duration-300 mt-4;
+}
+/* Font styles for code blocks */
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+/* Button Styling */
+button {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Apna-style Input Fields */
+input, textarea {
+  @apply border border-gray-300 rounded-md p-3 focus:ring-[#190A28] focus:border-[#190A28];
+}
+
+/* Form Labels */
+label {
+  @apply text-gray-700 font-medium text-sm;
+}
+
+/* Apna-style Cards */
+.card {
+  @apply bg-white shadow-lg rounded-lg p-6;
+}
+
+/* Utility Class for Apna-like Headings */
+h1, h2, h3, h4, h5, h6 {
+  @apply font-semibold text-[#190A28];
 }

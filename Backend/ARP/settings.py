@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-ci+c7%hf!wbg1!6hw^rjvq1-o+-ydv4tzcu@#$+c^472o)-7v_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -40,9 +40,12 @@ INSTALLED_APPS = [
     'rest_framework',
     'hr',
     'candidate',
+    'django_extensions',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # Add this line at the top
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -78,8 +81,16 @@ WSGI_APPLICATION = 'ARP.wsgi.application'
 
 # settings.py
 
+# Allow all HTTP methods
+CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
 
+# Allow all headers
+CORS_ALLOW_HEADERS = ["*"]
 
+# Allow credentials (use only if needed)
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 SECRET_KEY = 'apna'
 
