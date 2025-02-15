@@ -4,7 +4,7 @@ export default function PasswordStrengthBar({ password }) {
       if (/[A-Z]/.test(password) && /[0-9]/.test(password)) return "Strong";
       return "Medium";
     };
-  
+
     return (
       <div className="mt-2">
         <div className={`h-2 rounded-full ${getStrength() === "Weak" ? "bg-red-500" : getStrength() === "Medium" ? "bg-yellow-500" : "bg-green-500"}`}></div>
@@ -12,4 +12,3 @@ export default function PasswordStrengthBar({ password }) {
       </div>
     );
   }
-  

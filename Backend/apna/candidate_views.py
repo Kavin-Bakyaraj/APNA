@@ -7,6 +7,9 @@ import jwt
 import bcrypt  
 import google.generativeai as genai
 from django.core.files.storage import default_storage
+import re
+from bson import ObjectId
+
 # MongoDB Connection
 client = MongoClient('mongodb+srv://kavinkavin8466:kavinbox@apnaclone.bwrct.mongodb.net/')
 db = client['apnaclone']
@@ -81,9 +84,6 @@ def candidate_reset_password(request):
         hashed_password = hash_password(data["new_password"])
         candidate_collection.update_one({"email": data["email"]}, {"$set": {"password": hashed_password, "otp": None, "otp_expiry": None}})
         return JsonResponse({"message": "Password reset successful"})
-from bson import ObjectId  # Import ObjectId
-
-from bson import ObjectId  # Import ObjectId
 
 @csrf_exempt
 def get_all_jobs(request):
@@ -124,14 +124,6 @@ def get_all_jobs(request):
             return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
 
     return JsonResponse({"message": "Invalid request method"}, status=405)
-
-
-
-import re
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-import json
-from bson import ObjectId
 
 @csrf_exempt
 def apply_for_job(request):
@@ -206,7 +198,6 @@ def apply_for_job(request):
             return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
 
     return JsonResponse({"message": "Invalid request method"}, status=405)
-
 
 @csrf_exempt
 def get_job_details(request, job_id):
