@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
-import PasswordStrengthBar from "../components/PasswordStrengthBar";
+import PasswordStrengthBar from "../../components/PasswordStrengthBar";
 
 export default function Register() {
   const [formData, setFormData] = useState({ name: "", email: "", password: "", confirmPassword: "" });
@@ -16,7 +16,7 @@ export default function Register() {
     }
 
     try {
-      const response = await fetch("http://localhost:8000/hr/register/", {
+      const response = await fetch("http://localhost:8000/apna/hr_register/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

@@ -1,39 +1,56 @@
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import Register from "./pages/Register";
-import Login from "./pages/Login";
+import { BrowserRouter as Router, Route, Routes, Outlet } from "react-router-dom";
+import Register from "./pages/HR/Register";
+import Login from "./pages/HR/Login";
+import  HrNavbar  from "./components/HrNavbar";
+import  ApplicantNavbar  from "./components/ApplicantNavbar";
+import HrDashboard from "./pages/HR/HrDashboard";
+import PostJob from "./pages/HR/PostJob";
+import CandidateRegister from "./pages/Candidate/CandidateRegister";
+import CandidateLogin from "./pages/Candidate/CandidateLogin";
+import Landing from "./pages/Landing";
+import JobPreview from "./pages/Candidate/JobPreview";
+import CandidateDashboard from "./pages/Candidate/CandidateDashboard";
 
+// Layout component for HR routes
+const HrLayout = () => (
+  <>
+    <HrNavbar />
+    <Outlet />
+  </>
+);
+
+// Layout component for Applicant routes
+const ApplicantLayout = () => (
+  <>
+    <ApplicantNavbar />
+    <Outlet />
+  </>
+);
 
 export default function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-[#F4F2F6] flex flex-col">
-        {/* Navbar */}
-        <nav className="bg-white shadow-md py-4 px-6 flex justify-between items-center">
-          <div className="text-[#190A28] text-2xl font-bold">apna</div>
-          <div>
-            <a href="/" className="text-[#190A28] font-medium px-4">Home</a>
-            <a href="/jobs" className="text-[#190A28] font-medium px-4">Jobs</a>
-            <a href="/career-compass" className="text-[#190A28] font-medium px-4">Career Compass</a>
-            <a href="/contests" className="text-[#190A28] font-medium px-4">Contests</a>
-          </div>
-          <div>
-            <a href="/login" className="px-4 py-2 bg-[#190A28] text-white rounded-md hover:bg-[#2B1C43] transition">Login</a>
-          </div>
-        </nav>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        {/* General Routes */}
+        <Route path="/hr-register" element={<Register />} />
+        <Route path="/hr-login" element={<Login />} />
 
-        {/* Main Content */}
-        <div className="flex-grow flex items-center justify-center">
-          <Routes>
-          <Route path="/register" element={<Register />} />
-            <Route path="/" element={<Login />} />
-          </Routes>
-        </div>
+        {/* HR Routes */}
+          <Route element={<HrLayout />}>
+          <Route path="/hr-dashboard" element={<HrDashboard />} />
+          <Route path="/post-job" element={<PostJob />} />
+        </Route>
 
-        {/* Footer */}
-        <footer className="bg-white py-4 text-center text-gray-600 text-sm shadow-md">
-          © 2025 Apna. All rights reserved.
-        </footer>
-      </div>
+        {/* Applicant Routes */}
+        <Route element={<ApplicantLayout />}>
+        <Route path="/candidate-register" element={<CandidateRegister />} />
+        <Route path="/candidate-login" element={<CandidateLogin />} />
+        <Route path="/candidate-dashboard" element={<CandidateDashboard />} />
+        <Route path="/jobs" element={<div>Jobs Page</div>} />
+        <Route path="/job-preview/:jobid" element={<JobPreview />} />
+      </Route>
+      </Routes>
     </Router>
   );
 }

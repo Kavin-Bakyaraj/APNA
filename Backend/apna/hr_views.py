@@ -4,7 +4,9 @@ import json, random
 from pymongo import MongoClient
 from datetime import datetime, timedelta
 import jwt
-import bcrypt  
+import bcrypt 
+from django.utils.decorators import method_decorator
+from bson.objectid import ObjectId
 
 # Database Connection
 client = MongoClient('mongodb+srv://kavinkavin8466:kavinbox@apnaclone.bwrct.mongodb.net/')
@@ -116,7 +118,7 @@ def hr_forgot_password(request):
         except Exception as e:
             return JsonResponse({"message": "Error", "error": str(e)}, status=500)
 
-# **HR Reset Password**
+
 @csrf_exempt
 def hr_reset_password(request):
     if request.method == "POST":
@@ -160,12 +162,6 @@ def hr_reset_password(request):
             print("Error:", str(e))
             return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
 
-
-# **HR Post Job**
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
-from bson.objectid import ObjectId
-
 @csrf_exempt
 def post_job(request):
     if request.method == "POST":
@@ -190,29 +186,37 @@ def post_job(request):
             except json.JSONDecodeError:
                 return JsonResponse({"message": "Invalid JSON format"}, status=400)
 
-            # Extract fields
-            job_title = data.get("job_title")
-            job_description = data.get("job_description")
-            skills_required = data.get("skills_required")
+            # Extract and validate fields
+            job_title = data.get("job_title", "").strip()
+            job_description = data.get("job_description", "").strip()
+            skills_required = data.get("skills_required", "").strip()
             salary = data.get("salary")
             experience = data.get("experience")
-            pass_percentage = data.get("pass_percentage")  # Removed default value
+            pass_percentage = data.get("pass_percentage")
             hr_questions = data.get("hr_questions", [])
 
             # Validate required fields
             if not all([job_title, job_description, skills_required, salary, experience]):
                 return JsonResponse({"message": "Missing job details"}, status=400)
 
-            # Validate pass percentage (HR must provide it)
-            if pass_percentage is None or not (0 <= pass_percentage <= 100):
+            # Convert numerical values properly
+            try:
+                salary = int(salary)
+                experience = int(experience)
+                pass_percentage = int(pass_percentage)
+            except ValueError:
+                return JsonResponse({"message": "Salary, Experience, and Pass Percentage must be numbers"}, status=400)
+
+            # Validate pass percentage range
+            if pass_percentage < 0 or pass_percentage > 100:
                 return JsonResponse({"message": "Pass percentage must be between 0 and 100"}, status=400)
 
-            # Validate questions
-            if len(hr_questions) < 5:
-                return JsonResponse({"message": "At least 5 questions are required"}, status=400)
+            # Validate HR questions
+            if not isinstance(hr_questions, list) or len(hr_questions) < 2 or len(hr_questions) > 5:
+                return JsonResponse({"message": "HR questions must be between 2 and 5"}, status=400)
 
             for question in hr_questions:
-                if not all(key in question for key in ["question", "keyword"]):
+                if not isinstance(question, dict) or not all(key in question for key in ["question", "keyword"]):
                     return JsonResponse({"message": "Each question must have 'question' and 'keyword'"}, status=400)
 
             # Insert into MongoDB
@@ -223,7 +227,7 @@ def post_job(request):
                 "skills_required": skills_required,
                 "salary": salary,
                 "experience": experience,
-                "pass_percentage": pass_percentage,  # Ensure it's set
+                "pass_percentage": pass_percentage,
                 "hr_questions": hr_questions,
                 "selected_candidates": []
             }
@@ -235,9 +239,6 @@ def post_job(request):
             return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
 
     return JsonResponse({"message": "Invalid request method"}, status=405)
-
-
-from bson import ObjectId
 
 @csrf_exempt
 def get_jobs(request):
