@@ -19,7 +19,7 @@ export default function Login() {
   const handleLogin = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:8000/hr/login/  ", {
+      const response = await fetch("http://localhost:8000/apna/hr_login/  ", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -38,7 +38,7 @@ export default function Login() {
 
   const handleForgotPassword = async () => {
     try {
-      const response = await fetch("http://localhost:8000/hr/forgot-password/ ", {
+      const response = await fetch("http://localhost:8000/apna/hr_forgot-password/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email }),
@@ -58,7 +58,7 @@ export default function Login() {
 
   const handleResetPassword = async () => {
     try {
-      const response = await fetch("http://localhost:8000/hr/reset-password/", {
+      const response = await fetch("http://localhost:8000/apna/hr_reset-password/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email, otp, new_password: newPassword }),
