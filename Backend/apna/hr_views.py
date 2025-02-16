@@ -120,7 +120,6 @@ def hr_forgot_password(request):
         except Exception as e:
             return JsonResponse({"message": "Error", "error": str(e)}, status=500)
 
-
 @csrf_exempt
 def hr_reset_password(request):
     if request.method == "POST":
@@ -133,16 +132,17 @@ def hr_reset_password(request):
             if not email or not otp or not new_password:
                 return JsonResponse({"message": "Missing required fields"}, status=400)
 
-            # Find user with matching OTP
+            # Find user with matching email
             user = hr_collection.find_one({"email": email})
 
             if not user:
                 return JsonResponse({"message": "Email not found"}, status=404)
 
-            # Check if OTP is valid and not expired
-            if user.get("otp") != otp:
+            # Ensure OTP is compared as strings
+            if str(user.get("otp")) != str(otp):
                 return JsonResponse({"message": "Invalid OTP"}, status=400)
 
+            # Check if OTP is expired
             if user.get("otp_expiry") and datetime.utcnow() > user["otp_expiry"]:
                 return JsonResponse({"message": "OTP expired"}, status=400)
 
