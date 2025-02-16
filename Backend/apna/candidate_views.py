@@ -139,19 +139,31 @@ def apply_for_job(request):
             if not job:
                 return JsonResponse({"message": "Job not found"}, status=404)
 
-            hr_questions = job.get("hr_questions", [])
             pass_percentage = job.get("pass_percentage", 50)
+            hr_questions = job.get("hr_questions", [])
 
             if pass_percentage is None or not (0 <= pass_percentage <= 100):
                 return JsonResponse({"message": "Invalid pass percentage in job details"}, status=400)
 
-            # Evaluation
+            # Check if candidate already applied
+            existing_candidate = next(
+                (c for c in job.get("applied_candidates", []) if c["email"] == candidate_email),
+                None
+            )
+
+            if existing_candidate:
+                if existing_candidate["test_status"] == "failed":
+                    return JsonResponse({"message": "You have already failed this test and cannot reapply"}, status=403)
+                elif existing_candidate["test_status"] == "passed":
+                    return JsonResponse({"message": "You have already passed and applied for this job"}, status=200)
+
+            # Evaluation logic
             total_questions = len(hr_questions)
             correct_answers = 0
-            debug_logs = []  # Store logs for debugging in Postman
+            debug_logs = []
 
             def keyword_match(keyword, answer):
-                """ Function to check if keyword is present as a separate word or phrase """
+                """Function to check if keyword is present as a separate word or phrase"""
                 return bool(re.search(r"\b" + re.escape(keyword) + r"\b", answer, re.IGNORECASE)) or (keyword in answer)
 
             for question in hr_questions:
@@ -174,23 +186,37 @@ def apply_for_job(request):
             # Calculate percentage
             score = (correct_answers / total_questions) * 100 if total_questions > 0 else 0
             passed = score >= pass_percentage
+            test_status = "passed" if passed else "failed"
 
-            # If passed, store candidate details in the job post
-            if passed:
-                candidate_details = candidate_collection.find_one({"email": candidate_email})
-                if candidate_details:
-                    candidate_profile = {
-                        "candidate_id": str(candidate_details["_id"]),
-                        "name": candidate_details["name"],
-                        "email": candidate_details["email"],
-                        "score": score
-                    }
-                    job_collection.update_one({"_id": ObjectId(job_id)}, {"$push": {"selected_candidates": candidate_profile}})
+            # Store application status
+            candidate_details = candidate_collection.find_one({"email": candidate_email})
+            if candidate_details:
+                candidate_profile = {
+                    "candidate_id": str(candidate_details["_id"]),
+                    "name": candidate_details["name"],
+                    "email": candidate_details["email"],
+                    "score": score,
+                    "test_status": test_status  # Store test status in applied candidates list
+                }
+
+                # Update the job document with applied candidate details
+                job_collection.update_one(
+                    {"_id": ObjectId(job_id)},
+                    {"$push": {"applied_candidates": candidate_profile}}
+                )
+
+                # If passed, also add to selected_candidates
+                if passed:
+                    job_collection.update_one(
+                        {"_id": ObjectId(job_id)},
+                        {"$push": {"selected_candidates": candidate_profile}}
+                    )
 
             return JsonResponse({
                 "message": "Test submitted",
                 "score": score,
                 "passed": passed,
+                "test_status": test_status,
                 "debug_logs": debug_logs  # Return logs in response
             })
 
@@ -202,21 +228,51 @@ def apply_for_job(request):
 @csrf_exempt
 def get_job_details(request, job_id):
     if request.method == "GET":
-        job = job_collection.find_one({"_id": ObjectId(job_id)})
-        if not job:
-            return JsonResponse({"message": "Job not found"}, status=404)
+        try:
+            # Extract token from request
+            auth_header = request.headers.get("Authorization")
+            if not auth_header or not auth_header.startswith("Bearer "):
+                return JsonResponse({"message": "Authorization token missing"}, status=401)
 
-        job_info = {
-            "job_title": job["job_title"],
-            "job_description": job["job_description"],
-            "skills_required": job["skills_required"],
-            "salary": job["salary"],
-            "experience": job["experience"],
-            "pass_percentage": job["pass_percentage"],
-            "hr_questions": [{"question": q["question"]} for q in job["hr_questions"]]  # Show only questions, not keywords
-        }
+            token = auth_header.split(" ")[1]  # Extract token
+            try:
+                decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+                candidate_email = decoded_token.get("email")
+            except jwt.ExpiredSignatureError:
+                return JsonResponse({"message": "Token expired"}, status=401)
+            except jwt.InvalidTokenError:
+                return JsonResponse({"message": "Invalid token"}, status=401)
 
-        return JsonResponse(job_info)
+            # Fetch job details
+            job = job_collection.find_one({"_id": ObjectId(job_id)})
+            if not job:
+                return JsonResponse({"message": "Job not found"}, status=404)
+
+            # Check if the candidate has applied before
+            applied_candidate = next(
+                (c for c in job.get("applied_candidates", []) if c["email"] == candidate_email),
+                None
+            )
+
+            # Determine test status
+            test_status = applied_candidate["test_status"] if applied_candidate else "not_attempted"
+
+            # Prepare job details response
+            job_info = {
+                "job_title": job["job_title"],
+                "job_description": job["job_description"],
+                "skills_required": job["skills_required"],
+                "salary": job["salary"],
+                "experience": job["experience"],
+                "pass_percentage": job["pass_percentage"],
+                "hr_questions": [{"question": q["question"]} for q in job["hr_questions"]],  # Only show questions
+                "test_status": test_status  # New field to indicate the test status
+            }
+
+            return JsonResponse(job_info, status=200)
+
+        except Exception as e:
+            return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
 
     return JsonResponse({"message": "Invalid request method"}, status=405)
 
@@ -402,6 +458,46 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 
 @csrf_exempt
+def get_candidate_test_status(request, job_id):
+    if request.method == "GET":
+        try:
+            auth_header = request.headers.get("Authorization")
+            if not auth_header:
+                return JsonResponse({"message": "Authorization token missing"}, status=401)
+
+            # Decode JWT token
+            try:
+                token = auth_header.split(" ")[1]  
+                decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+                candidate_email = decoded_token.get("email")
+            except jwt.ExpiredSignatureError:
+                return JsonResponse({"message": "Token expired"}, status=401)
+            except jwt.InvalidTokenError:
+                return JsonResponse({"message": "Invalid token"}, status=401)
+
+            # Find the job post
+            job = job_collection.find_one({"_id": ObjectId(job_id)})
+
+            if not job:
+                return JsonResponse({"message": "Job not found"}, status=404)
+
+            # Check candidate test status
+            candidate = next(
+                (c for c in job["selected_candidates"] if c["email"] == candidate_email), 
+                None
+            )
+
+            if not candidate:
+                return JsonResponse({"test_status": "Not Attempted"}, status=200)
+
+            return JsonResponse({"test_status": candidate.get("test_status", "Not Attempted")}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
+
+    return JsonResponse({"message": "Invalid request method"}, status=405)
+
+@csrf_exempt
 def candidate_test(request):
     if request.method == "POST":
         try:
@@ -497,6 +593,64 @@ def get_candidate_profile(request):
             candidate["_id"] = str(candidate["_id"])
 
             return JsonResponse(candidate, safe=False)
+
+        except Exception as e:
+            return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
+
+    return JsonResponse({"message": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def check_application_status(request, job_id):
+    if request.method == "GET":
+        try:
+            # Extract JWT Token
+            auth_header = request.headers.get("Authorization")
+            if not auth_header or not auth_header.startswith("Bearer "):
+                return JsonResponse({"message": "Token is missing"}, status=401)
+
+            token = auth_header.split(" ")[1]  # Extract the token
+            try:
+                decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+                candidate_email = decoded_token.get("email")
+            except jwt.ExpiredSignatureError:
+                return JsonResponse({"message": "Token has expired"}, status=401)
+            except jwt.InvalidTokenError:
+                return JsonResponse({"message": "Invalid token"}, status=401)
+
+            # Fetch Job Details
+            job = job_collection.find_one({"_id": ObjectId(job_id)})
+            if not job:
+                return JsonResponse({"message": "Job not found"}, status=404)
+
+            # Check if candidate is already in selected_candidates (Passed & Applied)
+            selected_candidate = next((c for c in job.get("selected_candidates", []) if c["email"] == candidate_email), None)
+
+            if selected_candidate:
+                return JsonResponse({
+                    "applied": True,
+                    "passed": True,
+                    "test_status": "selected",
+                    "message": "You have been selected for this job."
+                }, status=200)
+
+            # Check if candidate has applied but failed or not passed
+            applied_candidate = next((c for c in job.get("applied_candidates", []) if c["email"] == candidate_email), None)
+
+            if applied_candidate:
+                passed = applied_candidate.get("test_status") == "passed"
+                return JsonResponse({
+                    "applied": True,
+                    "passed": passed,
+                    "test_status": applied_candidate.get("test_status"),
+                    "message": "You have applied and passed the test!" if passed else "You have failed the test."
+                }, status=200)
+
+            return JsonResponse({
+                "applied": False,
+                "passed": False,
+                "test_status": "not_attempted",
+                "message": "You have not applied for this job yet."
+            }, status=200)
 
         except Exception as e:
             return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
