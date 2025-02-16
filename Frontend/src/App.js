@@ -14,6 +14,7 @@ import CandidateDetails from "./pages/HR/CandidateDetails";
 import CandidateResumeUpload from "./pages/Candidate/CandidateResumeUpload";
 import CandidateProfile from "./pages/Candidate/CandidateProfile";
 import JobList from "./pages/Candidate/Jobs";
+import JobsForYou from "./pages/Candidate/JobsForYou";
 
 // Layout component for HR routes
 const HrLayout = () => (
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="/jobs" element={<JobList />} />
         <Route path="/profile" element={<CandidateProfile />} />
         <Route path="/verify-profile" element={<CandidateResumeUpload /> } />
+        <Route path="/jobsforyou" element={<JobsForYou />} />
 
       </Route>
       </Routes>

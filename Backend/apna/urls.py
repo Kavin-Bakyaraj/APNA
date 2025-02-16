@@ -17,6 +17,7 @@ urlpatterns = [
     path("get_applied_jobs/", get_applied_jobs),
     path("upload_resume/", upload_resume),
     path("candidate_test/", candidate_test),
+    path("get_matched_jobs/", get_matched_jobs),
 
     #hr
     path('hr_register/', hr_register),

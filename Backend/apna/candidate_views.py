@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import json, random
 from pymongo import MongoClient
@@ -8,7 +8,7 @@ import bcrypt
 import google.generativeai as genai
 from django.core.files.storage import default_storage
 import re
-from bson import ObjectId
+from bson import ObjectId, json_util
 
 # MongoDB Connection
 client = MongoClient('mongodb+srv://kavinkavin8466:kavinbox@apnaclone.bwrct.mongodb.net/')
@@ -651,6 +651,60 @@ def check_application_status(request, job_id):
                 "test_status": "not_attempted",
                 "message": "You have not applied for this job yet."
             }, status=200)
+
+        except Exception as e:
+            return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
+
+    return JsonResponse({"message": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def get_matched_jobs(request):
+    if request.method == "GET":
+        try:
+            # Extract JWT token from headers
+            auth_header = request.headers.get("Authorization")
+            if not auth_header or not auth_header.startswith("Bearer "):
+                return JsonResponse({"message": "Token is missing"}, status=401)
+
+            token = auth_header.split(" ")[1]  # Extract token
+
+            try:
+                decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+                email = decoded_token.get("email")
+            except jwt.ExpiredSignatureError:
+                return JsonResponse({"message": "Token has expired"}, status=401)
+            except jwt.InvalidTokenError:
+                return JsonResponse({"message": "Invalid token"}, status=401)
+
+            # Fetch candidate details from MongoDB
+            candidate = candidate_collection.find_one({"email": email})
+            if not candidate:
+                return JsonResponse({"message": "Candidate not found"}, status=404)
+
+            # Check if the profile is verified
+            if "profile_status" not in candidate:
+                return JsonResponse({"message": "Profile not verified"}, status=403)
+            if candidate["profile_status"] == "Pending":
+                return JsonResponse({"message": "Profile verification pending"}, status=403)
+
+            # Convert skills to lowercase for better matching
+            candidate_skills = [skill.lower() for skill in candidate["resume_skills"]]
+
+            # Query jobs where any skill in resume_skills matches skills_required
+            matched_jobs = list(job_collection.find({
+                "$or": [
+                    {"skills_required": {"$in": candidate_skills}},  # If skills_required is an array
+                    {"skills_required": {"$regex": "|".join(candidate_skills), "$options": "i"}}  # If stored as a string
+                ]
+            }))
+
+            # Create response dictionary
+            response_data = {
+                "candidate_skills": candidate["resume_skills"],
+                "matched_jobs": matched_jobs
+            }
+
+            return HttpResponse(json_util.dumps(response_data), content_type="application/json")
 
         except Exception as e:
             return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)

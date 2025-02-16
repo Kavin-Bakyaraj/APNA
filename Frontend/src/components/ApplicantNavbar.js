@@ -28,7 +28,8 @@ export default function ApplicantNavbar() {
         <div className="hidden md:flex space-x-6">
           <Link to="/candidate-dashboard" className="text-[#190A28] font-medium hover:text-gray-600">Home</Link>
           <Link to="/jobs" className="text-[#190A28] font-medium hover:text-gray-600">Jobs</Link>
-          <Link to="/verify-profile" className="text-[#190A28] font-medium hover:text-gray-600">Jobs for You</Link>
+          <Link to="/jobsforyou" className="text-[#190A28] font-medium" onClick={() => setIsOpen(false)}>Jobs for You</Link>
+          <Link to="/profile" className="text-[#190A28] font-medium" onClick={() => setIsOpen(false)}>Profile</Link>
         </div>
 
         {/* Logout Button */}
@@ -53,6 +54,7 @@ export default function ApplicantNavbar() {
           <div className="absolute top-16 left-0 w-full bg-white shadow-md p-4 flex flex-col space-y-4 md:hidden">
             <Link to="/candidate-dashboard" className="text-[#190A28] font-medium" onClick={() => setIsOpen(false)}>Home</Link>
             <Link to="/jobs" className="text-[#190A28] font-medium" onClick={() => setIsOpen(false)}>Jobs</Link>
+            <Link to="/jobsforyou" className="text-[#190A28] font-medium" onClick={() => setIsOpen(false)}>Jobs for You</Link>
             <Link to="/profile" className="text-[#190A28] font-medium" onClick={() => setIsOpen(false)}>Profile</Link>
             <button
               onClick={() => {
