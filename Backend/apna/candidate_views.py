@@ -72,18 +72,47 @@ def candidate_forgot_password(request):
 
 @csrf_exempt
 def candidate_reset_password(request):
-    if request.method == "POST":
-        data = json.loads(request.body)
-        user = candidate_collection.find_one({"email": data["email"], "otp": data["otp"]})
-        if not user:
-            return JsonResponse({"message": "Invalid OTP"}, status=400)
-        
-        if datetime.utcnow() > user["otp_expiry"]:
-            return JsonResponse({"message": "OTP expired"}, status=400)
+     if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            email = data.get("email")
+            otp = data.get("otp")
+            new_password = data.get("new_password")
 
-        hashed_password = hash_password(data["new_password"])
-        candidate_collection.update_one({"email": data["email"]}, {"$set": {"password": hashed_password, "otp": None, "otp_expiry": None}})
-        return JsonResponse({"message": "Password reset successful"})
+            if not email or not otp or not new_password:
+                return JsonResponse({"message": "Missing required fields"}, status=400)
+
+            # Find user with matching email
+            user = candidate_collection.find_one({"email": email})
+
+            if not user:
+                return JsonResponse({"message": "Email not found"}, status=404)
+
+            # Ensure OTP is compared as strings
+            if str(user.get("otp")) != str(otp):
+                return JsonResponse({"message": "Invalid OTP"}, status=400)
+
+            # Check if OTP is expired
+            if user.get("otp_expiry") and datetime.utcnow() > user["otp_expiry"]:
+                return JsonResponse({"message": "OTP expired"}, status=400)
+
+            # Hash new password before storing
+            hashed_password = hash_password(new_password)
+
+            # Update password and remove OTP from database
+            hr_collection.update_one(
+                {"email": email},
+                {"$set": {"password": hashed_password, "otp": None, "otp_expiry": None}}
+            )
+
+            return JsonResponse({"message": "Password reset successful"})
+
+        except json.JSONDecodeError:
+            return JsonResponse({"message": "Invalid JSON format"}, status=400)
+
+        except Exception as e:
+            print("Error:", str(e))
+            return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
 
 @csrf_exempt
 def get_all_jobs(request):
@@ -162,25 +191,48 @@ def apply_for_job(request):
             correct_answers = 0
             debug_logs = []
 
-            def keyword_match(keyword, answer):
-                """Function to check if keyword is present as a separate word or phrase"""
-                return bool(re.search(r"\b" + re.escape(keyword) + r"\b", answer, re.IGNORECASE)) or (keyword in answer)
+            def keyword_match(keywords, answer):
+                """
+                Function to check multiple keywords in an answer
+                Returns the fraction of keywords matched (0 to 1)
+                """
+                if isinstance(keywords, str):
+                    keywords = [keywords]  # Convert single keyword to list
+                
+                keywords = [k.strip().lower() for k in keywords]
+                answer = answer.lower()
+                
+                matched_keywords = 0
+                for keyword in keywords:
+                    if bool(re.search(r"\b" + re.escape(keyword) + r"\b", answer, re.IGNORECASE)) or (keyword in answer):
+                        matched_keywords += 1
+                
+                return matched_keywords / len(keywords) if keywords else 0
 
             for question in hr_questions:
                 q_text = question["question"]
-                keyword = question["keyword"].strip().lower()
-                candidate_answer = answers.get(q_text, "").strip().lower()
+                keywords = question["keyword"]  # This can be either a string or a list of keywords
+                candidate_answer = answers.get(q_text, "").strip()
 
-                match = keyword_match(keyword, candidate_answer)
-                if match:
-                    correct_answers += 1
+                # Convert string keyword to list if necessary
+                if isinstance(keywords, str):
+                    keywords = [keyword.strip() for keyword in keywords.split(',')]
+                elif isinstance(keywords, list):
+                    keywords = [k.strip() for k in keywords]
+                else:
+                    keywords = [str(keywords).strip()]
+
+                # Calculate partial credit
+                match_score = keyword_match(keywords, candidate_answer)
+                correct_answers += match_score
 
                 # Add logs for debugging
                 debug_logs.append({
                     "question": q_text,
-                    "expected_keyword": keyword,
+                    "expected_keywords": keywords,
                     "candidate_answer": candidate_answer,
-                    "match_found": match
+                    "match_score": match_score,
+                    "matched_percentage": f"{match_score * 100}%"
                 })
 
             # Calculate percentage
@@ -195,8 +247,8 @@ def apply_for_job(request):
                     "candidate_id": str(candidate_details["_id"]),
                     "name": candidate_details["name"],
                     "email": candidate_details["email"],
-                    "score": score,
-                    "test_status": test_status  # Store test status in applied candidates list
+                    "score": round(score, 2),  # Round to 2 decimal places
+                    "test_status": test_status
                 }
 
                 # Update the job document with applied candidate details
@@ -214,10 +266,10 @@ def apply_for_job(request):
 
             return JsonResponse({
                 "message": "Test submitted",
-                "score": score,
+                "score": round(score, 2),
                 "passed": passed,
                 "test_status": test_status,
-                "debug_logs": debug_logs  # Return logs in response
+                "debug_logs": debug_logs
             })
 
         except Exception as e:
@@ -257,15 +309,29 @@ def get_job_details(request, job_id):
             # Determine test status
             test_status = applied_candidate["test_status"] if applied_candidate else "not_attempted"
 
+            # Helper function to handle missing values
+            def get_value(field, default="N/A"):
+                return job.get(field, default) if job.get(field) not in [None, "", []] else default
+
             # Prepare job details response
             job_info = {
-                "job_title": job["job_title"],
-                "job_description": job["job_description"],
-                "skills_required": job["skills_required"],
-                "salary": job["salary"],
-                "experience": job["experience"],
-                "pass_percentage": job["pass_percentage"],
-                "hr_questions": [{"question": q["question"]} for q in job["hr_questions"]],  # Only show questions
+                "job_title": get_value("job_title"),
+                "company_name": get_value("company_name"),
+                "job_description": get_value("job_description"),
+                "contact_email": get_value("contact_email"),
+                "application_deadline": get_value("application_deadline"),
+                "work_type": get_value("work_type"),
+                "job_location": get_value("job_location"),
+                "category": get_value("category"),
+                "skills_required": get_value("skills_required"),
+                "salary": get_value("salary"),
+                "experience": get_value("experience"),
+                "pass_percentage": get_value("pass_percentage"),
+                "hr_questions": [
+                    {"question": q["question"]} for q in job.get("hr_questions", [])
+                ] if job.get("hr_questions") else [{"question": "N/A"}],  # Ensures at least "N/A" if empty
+                "selected_candidates": job.get("selected_candidates", []),
+                "applied_candidates": job.get("applied_candidates", []),
                 "test_status": test_status  # New field to indicate the test status
             }
 
@@ -391,6 +457,9 @@ def upload_resume(request):
             prompt = f"""
             You are an AI that extracts skills, work experience, and projects from a resume.
             Analyze the following resume and generate 10 scenario-based questions for the candidate based on their experience.
+            Give new questions to each candidates and each resumes, dont give the keyword directly as same in the question.
+            Give atleast two keywords for each question.
+            
 
             Resume Text:
             {trimmed_resume_text}
@@ -501,15 +570,15 @@ def get_candidate_test_status(request, job_id):
 def candidate_test(request):
     if request.method == "POST":
         try:
-            # **🔹 Extract token from Authorization header**
+            # Extract token from Authorization header
             auth_header = request.headers.get("Authorization")
             if not auth_header or not auth_header.startswith("Bearer "):
                 return JsonResponse({"message": "Token is missing"}, status=401)
 
-            token = auth_header.split(" ")[1]  # Extract the actual token
+            token = auth_header.split(" ")[1]
 
             try:
-                # **🔹 Decode JWT to get user email**
+                # Decode JWT to get user email
                 decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
                 email = decoded_token.get("email")
             except jwt.ExpiredSignatureError:
@@ -517,47 +586,95 @@ def candidate_test(request):
             except jwt.InvalidTokenError:
                 return JsonResponse({"message": "Invalid token"}, status=401)
 
-            # **🔹 Get candidate answers from request**
+            # Get candidate answers from request
             data = json.loads(request.body.decode("utf-8"))
             candidate_answers = data.get("answers", {})
 
             if not candidate_answers:
                 return JsonResponse({"message": "Answers are required"}, status=400)
 
-            # **🔹 Fetch stored questions from MongoDB**
+            # Fetch stored questions from MongoDB
             candidate_data = candidate_collection.find_one({"email": email})
             if not candidate_data or "generated_questions" not in candidate_data:
                 return JsonResponse({"message": "No generated questions found for this candidate"}, status=404)
 
             generated_questions = candidate_data["generated_questions"]
-            correct_count = 0
+            question_scores = []
+            total_score = 0
 
-            # **🔹 Compare answers with expected keywords**
+            def check_keywords(answer, keywords):
+                """
+                Check for multiple keywords in the answer.
+                Returns tuple of (matched_keywords_count, total_keywords_count).
+                """
+                if not isinstance(keywords, list):  # Ensure keywords is a list
+                    return 0, 0
+
+                answer = answer.lower()
+                matched_keywords = sum(1 for keyword in keywords if keyword.lower().strip() in answer)
+
+                return matched_keywords, len(keywords)
+
+            # Compare answers with expected keywords
             for question_data in generated_questions:
-                question_text = question_data["question"]
-                expected_keyword = question_data["keyword"].lower()
+                question_text = question_data.get("question", "")
+                expected_keywords = question_data.get("keywords", [])  # ✅ Corrected field name
 
-                candidate_response = candidate_answers.get(question_text, "").lower()
-                if expected_keyword in candidate_response:
-                    correct_count += 1
+                candidate_response = candidate_answers.get(question_text, "").strip()
 
-            # **🔹 Determine profile status**
+                # Ensure expected_keywords is a valid list
+                if not isinstance(expected_keywords, list):
+                    expected_keywords = []
+
+                # Get number of matched keywords and total keywords
+                matched, total = check_keywords(candidate_response, expected_keywords)
+
+                # Calculate score for this question (each keyword worth equal portion)
+                question_score = (matched / total) if total > 0 else 0
+                total_score += question_score
+
+                # Store detailed scoring information
+                question_scores.append({
+                    "question": question_text,
+                    "expected_keywords": expected_keywords,
+                    "matched_keywords": matched,
+                    "total_keywords": total,
+                    "score": round(question_score, 2)
+                })
+
+            # Calculate final score percentage
             total_questions = len(generated_questions)
-            score_percentage = (correct_count / total_questions) * 100
+            score_percentage = (total_score / total_questions) * 100 if total_questions > 0 else 0
+
+            # Determine profile status
             profile_status = "Verified" if score_percentage >= 60 else "Pending"
 
-            # **🔹 Update candidate profile status in MongoDB**
+            # Update candidate profile status in MongoDB
             candidate_collection.update_one(
                 {"email": email},
-                {"$set": {"profile_status": profile_status}}
+                {
+                    "$set": {
+                        "profile_status": profile_status,
+                        "test_results": {
+                            "score_percentage": round(score_percentage, 2),
+                            "question_scores": question_scores,
+                            "total_score": round(total_score, 2),
+                            "total_questions": total_questions,
+                            "test_date": datetime.utcnow()
+                        }
+                    }
+                }
             )
 
             return JsonResponse({
                 "message": "Test evaluated successfully",
-                "correct_answers": correct_count,
-                "total_questions": total_questions,
-                "score_percentage": score_percentage,
-                "profile_status": profile_status
+                "score_percentage": round(score_percentage, 2),
+                "profile_status": profile_status,
+                "detailed_scores": {
+                    "total_score": round(total_score, 2),
+                    "total_questions": total_questions,
+                    "question_scores": question_scores
+                }
             }, status=200)
 
         except Exception as e:
@@ -593,6 +710,118 @@ def get_candidate_profile(request):
             candidate["_id"] = str(candidate["_id"])
 
             return JsonResponse(candidate, safe=False)
+
+        except Exception as e:
+            return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
+
+    return JsonResponse({"message": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def get_matched_jobs(request):
+    if request.method == "GET":
+        try:
+            # Extract JWT token from headers
+            auth_header = request.headers.get("Authorization")
+            if not auth_header or not auth_header.startswith("Bearer "):
+                return JsonResponse({"message": "Token is missing"}, status=401)
+
+            token = auth_header.split(" ")[1]  # Extract token
+
+            try:
+                decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+                email = decoded_token.get("email")
+            except jwt.ExpiredSignatureError:
+                return JsonResponse({"message": "Token has expired"}, status=401)
+            except jwt.InvalidTokenError:
+                return JsonResponse({"message": "Invalid token"}, status=401)
+
+            # Fetch candidate details from MongoDB
+            candidate = candidate_collection.find_one({"email": email})
+            if not candidate:
+                return JsonResponse({"message": "Candidate not found"}, status=404)
+
+            # Check if the profile is verified
+            if "profile_status" not in candidate:
+                return JsonResponse({"message": "Profile not verified"}, status=403)
+            if candidate["profile_status"] == "Pending":
+                return JsonResponse({"message": "Profile verification pending"}, status=403)
+
+            # Convert skills to lowercase for better matching
+            candidate_skills = [skill.lower() for skill in candidate["resume_skills"]]
+
+            # Query jobs where any skill in `resume_skills` matches `skills_required`
+            matched_jobs = list(job_collection.find({
+                "$or": [
+                    {"skills_required": {"$in": candidate_skills}},  # If skills_required is an array
+                    {"skills_required": {"$regex": "|".join(candidate_skills), "$options": "i"}}  # If stored as a string
+                ]
+            }))
+
+            # Create response dictionary
+            response_data = {
+                "candidate_skills": candidate["resume_skills"],
+                "matched_jobs": matched_jobs
+            }
+
+            return HttpResponse(json_util.dumps(response_data), content_type="application/json")
+
+        except Exception as e:
+            return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
+
+    return JsonResponse({"message": "Invalid request method"}, status=405)
+
+from django.http import HttpResponse, JsonResponse
+from bson import json_util
+
+
+@csrf_exempt
+def get_matched_jobs(request):
+    if request.method == "GET":
+        try:
+            # Extract JWT token from headers
+            auth_header = request.headers.get("Authorization")
+            if not auth_header or not auth_header.startswith("Bearer "):
+                return JsonResponse({"message": "Token is missing"}, status=401)
+
+            token = auth_header.split(" ")[1]  # Extract token
+
+            try:
+                decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+                email = decoded_token.get("email")
+            except jwt.ExpiredSignatureError:
+                return JsonResponse({"message": "Token has expired"}, status=401)
+            except jwt.InvalidTokenError:
+                return JsonResponse({"message": "Invalid token"}, status=401)
+
+            # Fetch candidate details from MongoDB
+            candidate = candidate_collection.find_one({"email": email})
+            if not candidate:
+                return JsonResponse({"message": "Candidate not found"}, status=404)
+
+            # Check if the profile is verified
+            if "profile_status" not in candidate:
+                return JsonResponse({"message": "Profile not verified"}, status=403)
+            if candidate["profile_status"] == "Pending":
+                return JsonResponse({"message": "Profile verification pending"}, status=403)
+
+            # Convert skills to lowercase for better matching
+            candidate_skills = [skill.lower() for skill in candidate["resume_skills"]]
+
+            # Query jobs where any skill in `resume_skills` matches `skills_required`
+            matched_jobs = list(job_collection.find({
+                "$or": [
+                    {"skills_required": {"$in": candidate_skills}},  # If skills_required is an array
+                    {"skills_required": {"$regex": "|".join(candidate_skills), "$options": "i"}}  # If stored as a string
+                ]
+            }))
+
+            # Create response dictionary
+            response_data = {
+                "candidate_skills": candidate["resume_skills"],
+                "matched_jobs": matched_jobs
+            }
+
+            return HttpResponse(json_util.dumps(response_data), content_type="application/json")
 
         except Exception as e:
             return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)

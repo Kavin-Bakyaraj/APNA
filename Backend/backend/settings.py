@@ -27,6 +27,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_COOKIE_SECURE = False
 
 # Application definition
 
@@ -73,22 +74,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
 # Allow all HTTP methods
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
 
 # Allow all headers
 CORS_ALLOW_HEADERS = ["*"]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",  # Frontend origin
+    "http://localhost:3001",  # Frontend origin
+    'http://127.0.0.1:8000',
+]
 
 # Allow credentials (use only if needed)
 CORS_ALLOW_CREDENTIALS = True

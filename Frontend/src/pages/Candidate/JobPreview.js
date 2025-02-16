@@ -135,17 +135,37 @@ const JobPreview = () => {
       {job ? (
         <div className="bg-white shadow-md rounded-lg p-6 mt-4">
           <h2 className="text-2xl font-bold text-black-700">{job.job_title}</h2>
-          <p>{job.job_description}</p>
+          <p className="text-gray-600 mt-2">{job.job_description}</p>
 
-          <p>
-            <strong>Skills Required:</strong> {job.skills_required}
-          </p>
-          <p>
-            <strong>Salary:</strong> {job.salary} LPA
-          </p>
-          <p>
-            <strong>Experience:</strong> {job.experience} years
-          </p>
+          <div className="mt-4">
+            <p>
+              <strong>Company Name:</strong> {job.company_name}
+            </p>
+            <p>
+              <strong>Application Deadline mm/dd/year:</strong> {new Date(job.application_deadline).toLocaleDateString()}
+            </p>
+            <p>
+              <strong>Work Type:</strong> {job.work_type}
+            </p>
+            <p>
+              <strong>Job Location:</strong> {job.job_location}
+            </p>
+            <p>
+              <strong>Category:</strong> {job.category}
+            </p>
+            <p>
+              <strong>Skills Required:</strong> {job.skills_required}
+            </p>
+            <p>
+              <strong>Salary:</strong> {job.salary} LPA
+            </p>
+            <p>
+              <strong>Experience:</strong> {job.experience} years
+            </p>
+            <p>
+              <strong>Pass Percentage:</strong> {job.pass_percentage}%
+            </p>
+          </div>
 
           {/* Apply Button Logic */}
           {testStatus === "not_attempted" ? (

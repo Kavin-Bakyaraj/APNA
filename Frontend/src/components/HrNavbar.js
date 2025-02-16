@@ -28,7 +28,7 @@ export default function HrNavbar() {
         <div className="hidden md:flex space-x-6">
           <Link to="/hr-dashboard" className="text-[#190A28] font-medium hover:text-gray-600">Dashboard</Link>
           <Link to="/post-job" className="text-[#190A28] font-medium hover:text-gray-600">Post Job</Link>
-          <Link to="/hr-applicants" className="text-[#190A28] font-medium hover:text-gray-600">Applicants</Link>
+          <Link to="/hr-profile" className="text-[#190A28] font-medium hover:text-gray-600">Profile</Link>
         </div>
 
         {/* Logout Button */}
@@ -53,7 +53,7 @@ export default function HrNavbar() {
           <div className="absolute top-16 left-0 w-full bg-white shadow-md p-4 flex flex-col space-y-4 md:hidden">
             <Link to="/hr-dashboard" className="text-[#190A28] font-medium" onClick={() => setIsOpen(false)}>Dashboard</Link>
             <Link to="/post-job" className="text-[#190A28] font-medium" onClick={() => setIsOpen(false)}>Post Job</Link>
-            <Link to="/hr-applicants" className="text-[#190A28] font-medium" onClick={() => setIsOpen(false)}>Applicants</Link>
+            <Link to="/hr-profile" className="text-[#190A28] font-medium" onClick={() => setIsOpen(false)}>Profile</Link>
             <button
               onClick={() => {
                 setIsOpen(false);

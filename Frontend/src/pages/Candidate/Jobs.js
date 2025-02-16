@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiBriefcase, FiUser, FiMail } from "react-icons/fi";
+import { FiBriefcase, FiUser, FiMail, FiSearch, FiChevronDown } from "react-icons/fi";
 
 export default function JobList() {
   const [jobs, setJobs] = useState([]);
+  const [filteredJobs, setFilteredJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortType, setSortType] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -14,6 +17,7 @@ export default function JobList() {
         const data = await response.json();
         if (response.ok) {
           setJobs(data.jobs);
+          setFilteredJobs(data.jobs);
         } else {
           console.error("Error fetching jobs:", data.message);
         }
@@ -27,22 +31,59 @@ export default function JobList() {
     fetchJobs();
   }, []);
 
+  useEffect(() => {
+    // Filter jobs based on search query
+    const filtered = jobs.filter((job) =>
+      job.job_title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // Sort jobs based on sort type
+    if (sortType === "salary") {
+      filtered.sort((a, b) => b.salary - a.salary);
+    } else if (sortType === "experience") {
+      filtered.sort((a, b) => b.experience - a.experience);
+    }
+
+    setFilteredJobs(filtered);
+  }, [searchQuery, sortType, jobs]);
+
   const formatSkills = (skills) => {
     return Array.isArray(skills) ? skills.join(", ") : skills;
   };
 
   return (
-
     <div className="min-h-screen flex flex-col items-center bg-gray-50 p-6">
       <h2 className="text-3xl font-bold text-[#190A28] mb-6">Available Jobs</h2>
 
+      <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-2 w-full max-w-6xl mb-4">
+        <div className="relative w-full md:w-auto">
+          <FiSearch className="absolute left-3 top-2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search jobs by title..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-4 py-2 border rounded-md w-full md:w-64"
+          />
+        </div>
+        <select
+          className="px-4 py-2 border rounded-md w-full md:w-auto"
+          value={sortType}
+          onChange={(e) => setSortType(e.target.value)}
+        >
+          <option value="">Sort By</option>
+          <option value="salary">Highest Salary</option>
+          <option value="experience">Most Experience</option>
+        </select>
+      </div>
+
       {loading ? (
         <p className="text-lg text-gray-500">Loading jobs...</p>
-      ) : jobs.length === 0 ? (
+      ) : filteredJobs.length === 0 ? (
         <p className="text-lg text-gray-500">No jobs available.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
-          {jobs.map((job) => (
+          {filteredJobs.slice().reverse().map((job) => (
             <div
               key={job.job_id}
               onClick={() => navigate(`/job-preview/${job.job_id}`)}
