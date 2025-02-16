@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { toast } from "react-toastify";
 import Cookies from "js-cookie";
@@ -32,6 +32,7 @@ export default function Login() {
       if (response.ok) {
         // Store JWT token in cookies
         Cookies.set("jwt", data.token, { expires: 1, path: "/" });
+        localStorage.setItem("hr_email", formData.email);
         toast.success("Login successful!");
         navigate("/hr-dashboard");
       } else {
@@ -81,6 +82,15 @@ export default function Login() {
       toast.error("Error resetting password.");
     }
   };
+
+  useEffect(() => {
+    // Clear all cookies and local storage when login page is loaded
+    Cookies.remove("jwt");
+    Cookies.remove("candidate_email");
+    Cookies.remove("hr_email");
+    localStorage.clear();
+    sessionStorage.clear();
+  }, []);
 
   return (
     <div className="min-h-screen flex justify-center items-center bg-gray-100 px-4">

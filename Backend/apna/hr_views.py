@@ -7,11 +7,13 @@ import jwt
 import bcrypt 
 from django.utils.decorators import method_decorator
 from bson.objectid import ObjectId
+import urllib.parse
 
 # Database Connection
 client = MongoClient('mongodb+srv://kavinkavin8466:kavinbox@apnaclone.bwrct.mongodb.net/')
 db = client['apnaclone']
 hr_collection = db['hr']
+candidate_collection = db['candidate']
 job_collection = db['job_details']  # New Collection for Job Posts
 SECRET_KEY = "apna"
 
@@ -293,12 +295,6 @@ def get_selected_candidates(request, job_id):
 
     return JsonResponse({"message": "Invalid request method"}, status=405)
 
-
-from bson import ObjectId
-import jwt
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-
 @csrf_exempt
 def delete_job(request, job_id):  # Accept job_id from the URL
     if request.method == "DELETE":
@@ -329,6 +325,43 @@ def delete_job(request, job_id):  # Accept job_id from the URL
             job_collection.delete_one({"_id": ObjectId(job_id)})
 
             return JsonResponse({"message": "Job deleted successfully"}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
+
+    return JsonResponse({"message": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def get_candidate_details(request, email):
+    if request.method == "GET":
+        try:
+            # Verify token
+            auth_header = request.headers.get("Authorization")
+            if not auth_header:
+                return JsonResponse({"message": "Authorization token missing"}, status=401)
+
+            try:
+                token = auth_header.split(" ")[1]
+                decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+                hr_id = decoded_token.get("hr_id")
+            except jwt.ExpiredSignatureError:
+                return JsonResponse({"message": "Token expired"}, status=401)
+            except jwt.InvalidTokenError:
+                return JsonResponse({"message": "Invalid token"}, status=401)
+
+            # Decode URL-encoded email
+            decoded_email = urllib.parse.unquote(email)
+
+            # Fetch candidate from database (case-insensitive lookup)
+            candidate = candidate_collection.find_one({"email": {"$regex": f"^{decoded_email}$", "$options": "i"}})
+
+            if not candidate:
+                return JsonResponse({"message": "Candidate not found"}, status=404)
+
+            # Convert ObjectId to string for JSON serialization
+            candidate['_id'] = str(candidate['_id'])
+
+            return JsonResponse(candidate, safe=False)
 
         except Exception as e:
             return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
