@@ -468,3 +468,37 @@ def candidate_test(request):
             return JsonResponse({"message": "Error evaluating test", "error": str(e)}, status=500)
 
     return JsonResponse({"message": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def get_candidate_profile(request):
+    if request.method == "GET":
+        try:
+            # Extract JWT token from headers
+            auth_header = request.headers.get("Authorization")
+            if not auth_header or not auth_header.startswith("Bearer "):
+                return JsonResponse({"message": "Token is missing"}, status=401)
+
+            token = auth_header.split(" ")[1]  # Extract token
+
+            try:
+                decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+                email = decoded_token.get("email")
+            except jwt.ExpiredSignatureError:
+                return JsonResponse({"message": "Token has expired"}, status=401)
+            except jwt.InvalidTokenError:
+                return JsonResponse({"message": "Invalid token"}, status=401)
+
+            # Fetch candidate details from MongoDB
+            candidate = candidate_collection.find_one({"email": email})
+            if not candidate:
+                return JsonResponse({"message": "Candidate not found"}, status=404)
+
+            # Convert ObjectId to string for serialization
+            candidate["_id"] = str(candidate["_id"])
+
+            return JsonResponse(candidate, safe=False)
+
+        except Exception as e:
+            return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
+
+    return JsonResponse({"message": "Invalid request method"}, status=405)

@@ -1,59 +1,48 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiBriefcase, FiUser, FiMail } from "react-icons/fi";
-import Cookies from "js-cookie";
-import { toast } from "react-toastify";
 
-export default function CandidateDashboard() {
-  const [appliedJobs, setAppliedJobs] = useState([]);
+export default function JobList() {
+  const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchAppliedJobs = async () => {
+    const fetchJobs = async () => {
       try {
-        const token = Cookies.get("jwt");
-        if (!token) {
-          toast.error("Unauthorized! Please log in.");
-          navigate("/candidate-login");
-          return;
-        }
-
-        const response = await fetch("http://localhost:8000/apna/get_applied_jobs/", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
+        const response = await fetch("http://localhost:8000/apna/get_all_jobs/");
         const data = await response.json();
         if (response.ok) {
-          setAppliedJobs(data.applied_jobs);
+          setJobs(data.jobs);
         } else {
-          toast.error(data.message || "Error fetching applied jobs.");
+          console.error("Error fetching jobs:", data.message);
         }
       } catch (error) {
-        toast.error("Network error while fetching applied jobs.");
+        console.error("Error:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAppliedJobs();
-  }, [navigate]);
+    fetchJobs();
+  }, []);
+
+  const formatSkills = (skills) => {
+    return Array.isArray(skills) ? skills.join(", ") : skills;
+  };
 
   return (
+
     <div className="min-h-screen flex flex-col items-center bg-gray-50 p-6">
-      <h2 className="text-3xl font-bold text-[#190A28] mb-6">My Applied Jobs</h2>
+      <h2 className="text-3xl font-bold text-[#190A28] mb-6">Available Jobs</h2>
 
       {loading ? (
-        <p className="text-lg text-gray-500">Loading applied jobs...</p>
-      ) : appliedJobs.length === 0 ? (
-        <p className="text-lg text-gray-500">You haven't applied for any jobs yet.</p>
+        <p className="text-lg text-gray-500">Loading jobs...</p>
+      ) : jobs.length === 0 ? (
+        <p className="text-lg text-gray-500">No jobs available.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
-          {appliedJobs.map((job) => (
+          {jobs.map((job) => (
             <div
               key={job.job_id}
               onClick={() => navigate(`/job-preview/${job.job_id}`)}
@@ -66,7 +55,7 @@ export default function CandidateDashboard() {
 
               <div className="mt-3">
                 <p className="text-sm text-gray-600">
-                  <strong>Skills:</strong> {Array.isArray(job.skills_required) ? job.skills_required.join(", ") : job.skills_required}
+                  <strong>Skills:</strong> {formatSkills(job.skills_required)}
                 </p>
                 <p className="text-sm text-gray-600">
                   <strong>Salary:</strong> {job.salary} LPA
@@ -74,6 +63,15 @@ export default function CandidateDashboard() {
                 <p className="text-sm text-gray-600">
                   <strong>Experience:</strong> {job.experience} years
                 </p>
+              </div>
+
+              <div className="mt-4 text-sm text-gray-600 flex items-center">
+                <FiUser className="mr-2 text-[#190A28]" />
+                <strong>HR:</strong> {job.hr_name}
+              </div>
+              <div className="text-sm text-gray-600 flex items-center">
+                <FiMail className="mr-2 text-[#190A28]" />
+                <strong>Email:</strong> {job.hr_email}
               </div>
             </div>
           ))}

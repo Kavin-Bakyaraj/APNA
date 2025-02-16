@@ -7,8 +7,10 @@ export default function Landing() {
   const navigate = useNavigate();
   return (
     <div className="bg-gray-100 min-h-screen flex flex-col">
+      <div className='sticky top-0 bg-white shadow z-10 rounded-b-lg'>
       {/* Navbar */}
       <nav className="flex justify-between items-center p-4 bg-white shadow-md md:px-8 sticky top-0 z-50">
+        
         {/* <div className="text-xl font-bold text-gray-800">apna</div> */}
         
         {/* Hamburger Menu Button for Mobile */}
@@ -32,6 +34,7 @@ export default function Landing() {
         <button onClick={() => navigate('/hr-login')} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Employer Login</button>
         <button onClick={() => navigate('/candidate-login')} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Candidate Login</button>        </div>
       </nav>
+      </div>
 
       {/* Hero Section */}
       <section className="py-16 text-center px-4 md:px-0 flex-grow flex flex-col justify-center items-center">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
@@ -67,6 +67,15 @@ export default function CandidateLogin() {
 
     setLoading(false);
   };
+
+  useEffect(() => {
+    // Clear all cookies and local storage when login page is loaded
+    Cookies.remove("jwt");
+    Cookies.remove("candidate_email");
+    Cookies.remove("hr_email");
+    localStorage.clear();
+    sessionStorage.clear();
+  }, []);
 
   return (
     <div className="min-h-screen flex justify-center items-center bg-gray-50">
