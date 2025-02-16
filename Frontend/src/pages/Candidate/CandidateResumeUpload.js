@@ -47,7 +47,7 @@ export default function CandidateResumeUpload() {
       // Simulate progress bar filling
       let progress = 0;
       const progressInterval = setInterval(() => {
-        progress += 20;
+        progress += 10;
         setUploadProgress(progress);
         if (progress >= 100) {
           clearInterval(progressInterval);
@@ -55,7 +55,7 @@ export default function CandidateResumeUpload() {
           setQuestions(data.data.questions || []);
           toast.success("Resume uploaded successfully!");
         }
-      }, 2000);
+      }, 200);
     } catch (error) {
       toast.error(error.message);
     } finally {

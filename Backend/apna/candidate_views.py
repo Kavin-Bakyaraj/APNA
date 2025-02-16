@@ -9,15 +9,6 @@ import google.generativeai as genai
 from django.core.files.storage import default_storage
 import re
 from bson import ObjectId
-from django.http import HttpResponse, JsonResponse
-from bson import json_util
-import os
-import fitz  # PyMuPDF for PDF text extraction
-import pytesseract
-import google.generativeai as genai
-from PIL import Image
-import re
-
 
 # MongoDB Connection
 client = MongoClient('mongodb+srv://kavinkavin8466:kavinbox@apnaclone.bwrct.mongodb.net/')
@@ -396,6 +387,12 @@ def get_applied_jobs(request):
 
 genai.configure(api_key="AIzaSyBZ2_kNMN0cK81n9iSaEPEXFUDir4Sax8Q")
 
+import os
+import fitz  # PyMuPDF for PDF text extraction
+import pytesseract
+import google.generativeai as genai
+from PIL import Image
+import re
 TOKEN_LIMIT = 30720  # Gemini AI's max token limit
 
 # Windows users: Uncomment and set the correct Tesseract path if needed
@@ -523,6 +520,12 @@ def upload_resume(request):
 
     return JsonResponse({"message": "Invalid request method"}, status=405)
 
+
+import jwt
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+
 @csrf_exempt
 def get_candidate_test_status(request, job_id):
     if request.method == "GET":
@@ -601,42 +604,33 @@ def candidate_test(request):
 
             def check_keywords(answer, keywords):
                 """
-                Check for multiple keywords in the answer
-                Returns tuple of (matched_keywords_count, total_keywords_count)
+                Check for multiple keywords in the answer.
+                Returns tuple of (matched_keywords_count, total_keywords_count).
                 """
-                if isinstance(keywords, str):
-                    # If keywords is a string, split by comma and clean
-                    keywords = [k.strip().lower() for k in keywords.split(',')]
-                else:
-                    # If keywords is already a list, just clean it
-                    keywords = [k.strip().lower() for k in keywords]
+                if not isinstance(keywords, list):  # Ensure keywords is a list
+                    return 0, 0
 
                 answer = answer.lower()
-                matched_keywords = 0
-
-                for keyword in keywords:
-                    # Check if keyword exists as a whole word or phrase
-                    if (re.search(r'\b' + re.escape(keyword) + r'\b', answer) or 
-                        keyword in answer):
-                        matched_keywords += 1
+                matched_keywords = sum(1 for keyword in keywords if keyword.lower().strip() in answer)
 
                 return matched_keywords, len(keywords)
 
             # Compare answers with expected keywords
             for question_data in generated_questions:
-                question_text = question_data["question"]
-                expected_keywords = question_data["keyword"]
-                candidate_response = candidate_answers.get(question_text, "")
+                question_text = question_data.get("question", "")
+                expected_keywords = question_data.get("keywords", [])  # ✅ Corrected field name
+
+                candidate_response = candidate_answers.get(question_text, "").strip()
+
+                # Ensure expected_keywords is a valid list
+                if not isinstance(expected_keywords, list):
+                    expected_keywords = []
 
                 # Get number of matched keywords and total keywords
                 matched, total = check_keywords(candidate_response, expected_keywords)
-                
-                # Calculate score for this question (each keyword worth equal portion)
-                if total > 0:
-                    question_score = (matched / total)
-                else:
-                    question_score = 0
 
+                # Calculate score for this question (each keyword worth equal portion)
+                question_score = (matched / total) if total > 0 else 0
                 total_score += question_score
 
                 # Store detailed scoring information
@@ -645,13 +639,13 @@ def candidate_test(request):
                     "expected_keywords": expected_keywords,
                     "matched_keywords": matched,
                     "total_keywords": total,
-                    "score": question_score
+                    "score": round(question_score, 2)
                 })
 
             # Calculate final score percentage
             total_questions = len(generated_questions)
             score_percentage = (total_score / total_questions) * 100 if total_questions > 0 else 0
-            
+
             # Determine profile status
             profile_status = "Verified" if score_percentage >= 60 else "Pending"
 
@@ -775,6 +769,10 @@ def get_matched_jobs(request):
             return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
 
     return JsonResponse({"message": "Invalid request method"}, status=405)
+
+from django.http import HttpResponse, JsonResponse
+from bson import json_util
+
 
 @csrf_exempt
 def get_matched_jobs(request):
