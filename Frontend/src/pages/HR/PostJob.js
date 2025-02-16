@@ -1,13 +1,19 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 import Cookies from "js-cookie";
-import { FiAlertCircle } from "react-icons/fi";
+import { FiAlertCircle, FiInfo } from "react-icons/fi";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 
 export default function PostJob() {
   const [formData, setFormData] = useState({
     job_title: "",
+    company_name: "",
     job_description: "",
+    contact_email: "",
+    application_deadline: "",
+    selectedWorkType: "",
+    job_location: "",
+    selectedCategory: "",
     skills_required: "",
     salary: "",
     experience: "",
@@ -62,7 +68,13 @@ export default function PostJob() {
     let newErrors = {};
 
     if (!formData.job_title || formData.job_title.length > 50) newErrors.job_title = "Job Title is required (Max 50 chars)";
+    if (!formData.company_name) newErrors.company_name = "Company Name is required";
     if (!formData.job_description || formData.job_description.length > 500) newErrors.job_description = "Job Description is required (Max 500 chars)";
+    if (!formData.contact_email) newErrors.contact_email = "Contact Email is required";
+    if (!formData.application_deadline) newErrors.application_deadline = "Application Deadline is required";
+    if (!formData.selectedWorkType) newErrors.selectedWorkType = "Work Type is required";
+    if (!formData.job_location) newErrors.job_location = "Job Location is required";
+    if (!formData.selectedCategory) newErrors.selectedCategory = "Category is required";
     if (!formData.skills_required || formData.skills_required.length > 200) newErrors.skills_required = "Skills are required (Max 200 chars)";
     if (!formData.salary) newErrors.salary = "Salary is required";
     if (!formData.experience) newErrors.experience = "Experience is required";
@@ -117,7 +129,13 @@ const handleSubmit = async (e) => {
             toast.success("Job posted successfully!");
             setFormData({
                 job_title: "",
+                company_name: "",
                 job_description: "",
+                contact_email: "",
+                application_deadline: "",
+                selectedWorkType: "",
+                job_location: "",
+                selectedCategory: "",
                 skills_required: "",
                 salary: "",
                 experience: "",
@@ -137,16 +155,25 @@ const handleSubmit = async (e) => {
   return (
     <>
       <div className="min-h-screen bg-gray-50 flex justify-center py-6 px-4">
-        <div className="w-full max-w-3xl bg-white shadow-lg rounded-xl p-6">
+        <div className="w-full max-w-3xl bg-white shadow-lg rounded-xl p-4">
           <h2 className="text-2xl font-bold text-[#190A28] text-center mb-4">Post a Job</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
           {[
-            { name: "job_title", placeholder: "Enter Job Title", maxLength: 50, },
-            { name: "job_description", placeholder: "Enter Job Description", maxLength: 500, type: "textarea" },
-            { name: "skills_required", placeholder: "Enter Required Skills (comma-separated)", maxLength: 200 },
-            ].map(({ name, placeholder, maxLength, icon, type = "text" }) => (
+            { name: "job_title", title: "Job Title", example: "Software Engineer", placeholder: "Enter Job Title", maxLength: 50, },
+            { name: "company_name", title: "Company Name", example: "OneDot Communications.", placeholder: "Enter Company Name", maxLength: 100 },
+            { name: "job_description", title: "Job Description", example: "Develop and maintain software applications...", placeholder: "Enter Job Description", maxLength: 500, type: "textarea" },
+            { name: "contact_email", title: "Contact Email", example: "hr@onedotcommunication.com", placeholder: "Enter Contact Email", type: "email" },
+            { name: "application_deadline", title: "Application Deadline", example: "28-12-2025", placeholder: "Enter Application Deadline", type: "date" },
+            { name: "skills_required", title: "Skills Required", example: "JavaScript, React, Node.js", placeholder: "Enter Required Skills (comma-separated)", maxLength: 200 },
+            ].map(({ name, title, example, placeholder, maxLength, type = "text" }) => (
             <div key={name} className="relative">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">{icon}</div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {title}
+                  <FiInfo
+                    className="inline-block ml-1 text-gray-400 cursor-pointer"
+                    title={`Example: ${example}`}
+                  />
+                </label>
                 {type === "textarea" ? (
                 <textarea
                     name={name}
@@ -154,22 +181,24 @@ const handleSubmit = async (e) => {
                     onChange={handleChange}
                     placeholder={placeholder}
                     maxLength={maxLength}
-                    className="pl-12 pr-10 py-2 input-field h-24"
+                    className="pl-3 pr-10 py-2 input-field h-24"
                 ></textarea>
                 ) : (
                 <input
-                    type="text"
+                    type={type}
                     name={name}
                     value={formData[name]}
                     onChange={handleChange}
                     placeholder={placeholder}
                     maxLength={maxLength}
-                    className="pl-12 pr-10 py-2 input-field"
+                    className="pl-3 pr-10 py-2 input-field"
                 />
                 )}
-                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
-                {charCount[name]}/{maxLength}
-                </span>
+                {maxLength && (
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
+                    {charCount[name]}/{maxLength}
+                  </span>
+                )}
                 {errors[name] && (
                 <p className="text-red-500 text-sm mt-1 flex items-center">
                     <FiAlertCircle className="mr-1" /> {errors[name]}
@@ -178,9 +207,97 @@ const handleSubmit = async (e) => {
             </div>
             ))}
 
+            {/* Work Type (Dropdown) */}
+            <div key="selectedWorkType" className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Work Type
+                <FiInfo
+                  className="inline-block ml-1 text-gray-400 cursor-pointer"
+                  title="Example: Full-Time"
+                />
+              </label>
+              <select
+                name="selectedWorkType"
+                value={formData.selectedWorkType}
+                onChange={handleChange}
+                className="pl-3 input-field py-2"
+              >
+                <option value="" disabled>Select Work Type</option>
+                <option value="Full-Time">Full-Time</option>
+                <option value="Part-Time">Part-Time</option>
+                <option value="Contract">Contract</option>
+                <option value="Internship">Internship</option>
+              </select>
+              {errors.selectedWorkType && (
+                <p className="text-red-500 text-sm mt-1 flex items-center">
+                  <FiAlertCircle className="mr-1" /> {errors.selectedWorkType}
+                </p>
+              )}
+            </div>
+
+            {/* Job Location (Text Input) */}
+            <div key="job_location" className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Job Location
+                <FiInfo
+                  className="inline-block ml-1 text-gray-400 cursor-pointer"
+                  title="Example: New York, NY"
+                />
+              </label>
+              <input
+                type="text"
+                name="job_location"
+                value={formData.job_location}
+                onChange={handleChange}
+                placeholder="Enter Job Location"
+                className="pl-3 input-field py-2"
+              />
+              {errors.job_location && (
+                <p className="text-red-500 text-sm mt-1 flex items-center">
+                  <FiAlertCircle className="mr-1" /> {errors.job_location}
+                </p>
+              )}
+            </div>
+
+            {/* Category (Dropdown) */}
+            <div key="selectedCategory" className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Category
+                <FiInfo
+                  className="inline-block ml-1 text-gray-400 cursor-pointer"
+                  title="Example: Technology"
+                />
+              </label>
+              <select
+                name="selectedCategory"
+                value={formData.selectedCategory}
+                onChange={handleChange}
+                className="pl-3 input-field py-2"
+              >
+                <option value="" disabled>Select Category</option>
+                <option value="Technology">Technology</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Finance">Finance</option>
+                <option value="Education">Education</option>
+                <option value="Marketing">Marketing</option>
+              </select>
+              {errors.selectedCategory && (
+                <p className="text-red-500 text-sm mt-1 flex items-center">
+                  <FiAlertCircle className="mr-1" /> {errors.selectedCategory}
+                </p>
+              )}
+            </div>
+
             {/* Salary (Only Number Input) */}
             <div key="salary" className="relative">
-            <input
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Salary
+                <FiInfo
+                  className="inline-block ml-1 text-gray-400 cursor-pointer"
+                  title="Example: 70000"
+                />
+              </label>
+              <input
                 type="number"
                 name="salary"
                 value={formData.salary}
@@ -188,52 +305,66 @@ const handleSubmit = async (e) => {
                 placeholder="Enter Salary (LPA)"
                 className="pl-3 input-field py-2"
                 min="0"
-            />
-            {errors.salary && (
+              />
+              {errors.salary && (
                 <p className="text-red-500 text-sm mt-1 flex items-center">
-                <FiAlertCircle className="mr-1" /> {errors.salary}
+                  <FiAlertCircle className="mr-1" /> {errors.salary}
                 </p>
-            )}
+              )}
             </div>
 
             {/* Experience (Dropdown) */}
             <div key="experience" className="relative">
-            <select
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Experience
+                <FiInfo
+                  className="inline-block ml-1 text-gray-400 cursor-pointer"
+                  title="Example: 3 years"
+                />
+              </label>
+              <select
                 name="experience"
                 value={formData.experience}
                 onChange={handleChange}
                 className="pl-3 input-field py-2"
-            >
+              >
                 <option value="" disabled>Select Experience (Years)</option>
                 {[...Array(31).keys()].map((year) => (
                 <option key={year} value={year}>{year} {year === 1 ? "year" : "years"}</option>
                 ))}
-            </select>
-            {errors.experience && (
+              </select>
+              {errors.experience && (
                 <p className="text-red-500 text-sm mt-1 flex items-center">
-                <FiAlertCircle className="mr-1" /> {errors.experience}
+                  <FiAlertCircle className="mr-1" /> {errors.experience}
                 </p>
-            )}
+              )}
             </div>
 
             {/* Pass Percentage (Dropdown) */}
             <div key="pass_percentage" className="relative">
-            <select
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Pass Percentage
+                <FiInfo
+                  className="inline-block ml-1 text-gray-400 cursor-pointer"
+                  title="Example: 75%"
+                />
+              </label>
+              <select
                 name="pass_percentage"
                 value={formData.pass_percentage}
                 onChange={handleChange}
                 className="pl-3 input-field py-2"
-            >
+              >
                 <option value="" disabled>Select Pass Percentage</option>
                 {[...Array(101).keys()].map((percent) => (
                 <option key={percent} value={percent}>{percent}%</option>
                 ))}
-            </select>
-            {errors.pass_percentage && (
+              </select>
+              {errors.pass_percentage && (
                 <p className="text-red-500 text-sm mt-1 flex items-center">
-                <FiAlertCircle className="mr-1" /> {errors.pass_percentage}
+                  <FiAlertCircle className="mr-1" /> {errors.pass_percentage}
                 </p>
-            )}
+              )}
             </div>
 
             {/* HR Questions Section */}

@@ -188,9 +188,15 @@ def post_job(request):
             except json.JSONDecodeError:
                 return JsonResponse({"message": "Invalid JSON format"}, status=400)
 
-            # Extract and validate fields
+            # Extract and validate new fields
             job_title = data.get("job_title", "").strip()
+            company_name = data.get("company_name", "").strip()
             job_description = data.get("job_description", "").strip()
+            contact_email = data.get("contact_email", "").strip()
+            application_deadline = data.get("application_deadline", "").strip()
+            work_type = data.get("selectedWorkType", "").strip()  # Work type
+            job_location = data.get("job_location", "").strip()
+            category = data.get("selectedCategory", "").strip()  # Category
             skills_required = data.get("skills_required", "").strip()
             salary = data.get("salary")
             experience = data.get("experience")
@@ -198,7 +204,11 @@ def post_job(request):
             hr_questions = data.get("hr_questions", [])
 
             # Validate required fields
-            if not all([job_title, job_description, skills_required, salary, experience]):
+            if not all([
+                job_title, company_name, job_description, contact_email, 
+                application_deadline, work_type, job_location, category,
+                skills_required, salary, experience
+            ]):
                 return JsonResponse({"message": "Missing job details"}, status=400)
 
             # Convert numerical values properly
@@ -221,11 +231,17 @@ def post_job(request):
                 if not isinstance(question, dict) or not all(key in question for key in ["question", "keyword"]):
                     return JsonResponse({"message": "Each question must have 'question' and 'keyword'"}, status=400)
 
-            # Insert into MongoDB with test_status
+            # Insert into MongoDB with the new fields
             job_data = {
                 "hr_id": ObjectId(hr_id),
                 "job_title": job_title,
+                "company_name": company_name,
                 "job_description": job_description,
+                "contact_email": contact_email,
+                "application_deadline": application_deadline,
+                "work_type": work_type,
+                "job_location": job_location,
+                "category": category,
                 "skills_required": skills_required,
                 "salary": salary,
                 "experience": experience,
@@ -368,3 +384,35 @@ def get_candidate_details(request, email):
             return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
 
     return JsonResponse({"message": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def get_hr_profile(request):
+    if request.method == "GET":
+        try:
+            # Extract JWT token from headers
+            auth_header = request.headers.get("Authorization")
+            if not auth_header or not auth_header.startswith("Bearer "):
+                return JsonResponse({"message": "Token is missing"}, status=401)
+
+            token = auth_header.split(" ")[1]  # Extract token
+
+            try:
+                decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+                email = decoded_token.get("email")
+            except jwt.ExpiredSignatureError:
+                return JsonResponse({"message": "Token has expired"}, status=401)
+            except jwt.InvalidTokenError:
+                return JsonResponse({"message": "Invalid token"}, status=401)
+
+            # Fetch HR details from MongoDB
+            hr = hr_collection.find_one({"email": email})
+            if not hr:
+                return JsonResponse({"message": "HR profile not found"}, status=404)
+
+            # Convert ObjectId to string for serialization
+            hr["_id"] = str(hr["_id"])
+
+            return JsonResponse(hr, safe=False)
+
+        except Exception as e:
+            return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)

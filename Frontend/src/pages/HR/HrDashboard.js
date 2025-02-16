@@ -121,7 +121,7 @@ export default function HrDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredJobs.map((job) => (
+        {filteredJobs.slice().reverse().map((job) => (
           <div
             key={job._id}
             className="bg-white p-6 rounded-lg shadow-lg cursor-pointer hover:shadow-xl transition"
@@ -153,7 +153,7 @@ export default function HrDashboard() {
               className="mt-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-700 transition"
               onClick={() => deleteJob(job._id)}
             >
-              <FiTrash2 className="mr-2" /> Delete Job
+              <FiTrash2 className="mr-2" />
             </button>
 
             {expandedJob === job._id && (

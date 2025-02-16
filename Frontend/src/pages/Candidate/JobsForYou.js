@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import Cookies from "js-cookie";
 import { toast } from "react-toastify";
 
 const JobsForYou = () => {
   const [jobs, setJobs] = useState([]);
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [candidateSkills, setCandidateSkills] = useState([]);
 
@@ -44,7 +46,7 @@ const JobsForYou = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold text-purple-700">Jobs for You</h1>
+      <h1 className="text-3xl font-bold text-black-700">Jobs for You</h1>
       <p className="text-gray-600 mb-4">
         Based on your skills:{" "}
         <span className="font-semibold text-purple-600">{candidateSkills.join(", ")}</span>
@@ -54,9 +56,13 @@ const JobsForYou = () => {
         <div className="text-center text-gray-600">Loading jobs...</div>
       ) : jobs.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {jobs.map((job) => (
-            <div key={job._id.$oid} className="bg-white shadow-md rounded-lg p-6">
-              <h2 className="text-xl font-bold text-purple-700">{job.job_title}</h2>
+          {jobs.slice().reverse().map((job) => (
+           <div
+           key={job._id.$oid}
+           onClick={() => navigate(`/job-preview/${job._id.$oid}`)}
+           className="bg-white shadow-lg rounded-xl p-5 cursor-pointer hover:shadow-2xl transition transform hover:scale-105"
+         >
+              <h2 className="text-xl font-bold text-black-700">{job.job_title}</h2>
               <p className="text-gray-600">{job.job_description}</p>
 
               <p className="mt-2">

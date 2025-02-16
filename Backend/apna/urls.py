@@ -24,6 +24,7 @@ urlpatterns = [
     path('hr_login/', hr_login),
     path('hr_forgot-password/', hr_forgot_password),
     path('hr_reset-password/', hr_reset_password),
+    path("get_hr_profile/",get_hr_profile),
     path('post_job/', post_job),
     path('get_jobs/', get_jobs),
     path("get_selected_candidates/<str:job_id>/", get_selected_candidates, name="get_selected_candidates"),

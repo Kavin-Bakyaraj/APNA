@@ -49,6 +49,7 @@ export default function App() {
           <Route path="/hr-dashboard" element={<HrDashboard />} />
           <Route path="/post-job" element={<PostJob />} />
           <Route path="/candidate-details" element={<CandidateDetails />} />
+          {/* <Route path="/hr-profile" element={< />} /> */}
         </Route>
 
         {/* Applicant Routes */}
