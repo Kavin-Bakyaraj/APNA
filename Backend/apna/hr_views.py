@@ -221,7 +221,7 @@ def post_job(request):
                 if not isinstance(question, dict) or not all(key in question for key in ["question", "keyword"]):
                     return JsonResponse({"message": "Each question must have 'question' and 'keyword'"}, status=400)
 
-            # Insert into MongoDB
+            # Insert into MongoDB with test_status
             job_data = {
                 "hr_id": ObjectId(hr_id),
                 "job_title": job_title,
@@ -231,7 +231,8 @@ def post_job(request):
                 "experience": experience,
                 "pass_percentage": pass_percentage,
                 "hr_questions": hr_questions,
-                "selected_candidates": []
+                "selected_candidates": [],
+                "applied_candidates": []  # Store candidates who apply but have not taken the test
             }
             job_collection.insert_one(job_data)
 

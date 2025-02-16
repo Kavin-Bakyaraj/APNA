@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 import Cookies from "js-cookie";
-import HrNavbar from "../../components/HrNavbar";
 import { FiAlertCircle } from "react-icons/fi";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 
@@ -137,7 +136,6 @@ const handleSubmit = async (e) => {
 
   return (
     <>
-      <HrNavbar />
       <div className="min-h-screen bg-gray-50 flex justify-center py-6 px-4">
         <div className="w-full max-w-3xl bg-white shadow-lg rounded-xl p-6">
           <h2 className="text-2xl font-bold text-[#190A28] text-center mb-4">Post a Job</h2>
