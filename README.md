@@ -1,6 +1,6 @@
 # APNA
 
-APNA is a project primarily written in JavaScript with some components in Python, CSS, and HTML. This repository is private and is maintained by [Kavin-Bakyaraj](https://github.com/Kavin-Bakyaraj).
+APNA is a project primarily focused for enhanced version of the APNA app with AI implementation and enhanced features for both HR and Candidates and is maintained by [Kavin-Bakyaraj](https://github.com/Kavin-Bakyaraj).
 
 ## Table of Contents
 - [Description](#description)
