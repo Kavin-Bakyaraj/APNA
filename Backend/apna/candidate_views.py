@@ -485,7 +485,7 @@ def upload_resume(request):
             """
 
             # **🔹 Call Gemini AI**
-            model = genai.GenerativeModel("gemini-pro")
+            model = genai.GenerativeModel("gemini-2.0-flash")
             response = model.generate_content(prompt)
 
             # **🔹 Ensure response is valid JSON**
